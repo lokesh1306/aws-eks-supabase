@@ -1,0 +1,32 @@
+{{- if and .Values.realtime.enabled .Values.realtime.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "supabase.realtime.fullname" . }}
+  labels:
+    {{- include "supabase.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "supabase.realtime.fullname" . }}
+  minReplicas: {{ .Values.realtime.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.realtime.autoscaling.maxReplicas }}
+  metrics:
+    {{- if .Values.realtime.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.realtime.autoscaling.targetCPUUtilizationPercentage }}
+    {{- end }}
+    {{- if .Values.realtime.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.realtime.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
+{{- end }}

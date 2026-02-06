@@ -1,0 +1,32 @@
+{{- if and .Values.functions.enabled .Values.functions.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "supabase.functions.fullname" . }}
+  labels:
+    {{- include "supabase.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "supabase.functions.fullname" . }}
+  minReplicas: {{ .Values.functions.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.functions.autoscaling.maxReplicas }}
+  metrics:
+    {{- if .Values.functions.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.functions.autoscaling.targetCPUUtilizationPercentage }}
+    {{- end }}
+    {{- if .Values.functions.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.functions.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
+{{- end }}

@@ -1,0 +1,1588 @@
+## Supabase Helm Chart Configuration
+##
+## This chart mirrors the official Supabase
+## docker setup, adapted for Kubernetes.
+##
+## See: https://github.com/supabase/supabase/tree/master/docker
+##
+## File structure of values.yaml
+##
+## 1. Secrets      |  8. Storage
+## 2. Database     |  9. Image Proxy
+## 3. Studio       | 10. Kong
+## 4. Auth         | 11. Analytics
+## 5. REST         | 12. Vector
+## 6. Realtime     | 13. Functions
+## 7. Meta         | 14. Minio
+
+## 1. Secrets
+##    Shared credentials consumed by all chart components.
+##
+secret:
+  ## JSON Web Tokens
+  ## Used to sign and validate access tokens across all Supabase services
+  ## Docs: https://supabase.com/docs/guides/self-hosting/docker#generate-and-configure-api-keys
+  ##
+  jwt:
+    secretRef: "supabase-jwt-secret"
+    secretRefKey:
+      anonKey: anonKey
+      serviceKey: serviceKey
+      secret: secret
+
+    ## Reference to existing secret
+    # secretRef: ""
+
+    ## Map to actual keys inside secretRef if they differ
+    # secretRefKey:
+    #   anonKey: anonKey
+    #   serviceKey: serviceKey
+    #   secret: secret
+
+  ## PostgreSQL credentials
+  ## Required even when using an external database
+  ##
+  db:
+    secretRef: "supabase-database-secret"
+    secretRefKey:
+      password: password
+      database: database
+
+    ## Reference to existing secret
+    # secretRef: ""
+
+    ## Map to actual keys inside secretRef if they differ
+    # secretRefKey:
+    #   password: password
+    #   database: database
+
+  ## Logflare credentials
+  ##
+  analytics:
+    secretRef: "supabase-analytics-secret"
+    secretRefKey:
+      publicAccessToken: publicAccessToken
+      privateAccessToken: privateAccessToken
+
+    ## Reference to existing secret
+    # secretRef: ""
+
+    ## Map to actual keys inside secretRef if they differ
+    # secretRefKey:
+    #   publicAccessToken: publicAccessToken
+    #   privateAccessToken: privateAccessToken
+
+  ## SMTP credentials
+  ##
+  smtp:
+    username: "fake_mail_user"
+    password: "fake_mail_password"
+
+    ## Reference to existing secret
+    # secretRef: ""
+
+    ## Map to actual keys inside secretRef if they differ
+    # secretRefKey:
+    #   username: username
+    #   password: password
+
+  ## Studio dashboard credentials
+  ##
+  dashboard:
+    secretRef: "supabase-dashboard-secret"
+    secretRefKey:
+      username: username
+      password: password
+      openAiApiKey: openAiApiKey
+
+    ## Reference to existing secret
+    # secretRef: ""
+
+    ## Map to actual keys inside secretRef if they differ
+    # secretRefKey:
+    #   username: username
+    #   password: password
+    #   openAiApiKey: openAiApiKey
+
+  ## S3-compatible credentials
+  ##
+  s3:
+    isValid: "true"
+    secretRef: "supabase-storage-secret"
+    secretRefKey:
+      keyId: keyId
+      accessKey: accessKey
+
+    ## Reference to existing secret
+    # secretRef: ""
+
+    ## Map to actual keys inside secretRef if they differ
+    # secretRefKey:
+    #   keyId: keyId
+    #   accessKey: accessKey
+
+  ## Realtime service
+  ## Docs: https://supabase.com/docs/guides/realtime
+  ##
+  realtime:
+    secretRef: "supabase-realtime-secret"
+    secretRefKey:
+      secretKeyBase: secretKeyBase
+
+    ## Reference to existing secret
+    # secretRef: ""
+
+    ## Map to actual keys inside secretRef if they differ
+    # secretRefKey:
+    #   secretKeyBase: secretKeyBase
+
+  ## Meta service
+  ## Docs: https://github.com/supabase/postgres-meta
+  ##
+  meta:
+    secretRef: "supabase-meta-secret"
+    secretRefKey:
+      cryptoKey: cryptoKey
+
+    ## Reference to existing secret
+    # secretRef: ""
+
+    ## Map to actual keys inside secretRef if they differ
+    # secretRefKey:
+    #   cryptoKey: cryptoKey
+
+## 2. Database
+##    Primary Postgres instance consumed by every Supabase workload in this chart.
+##
+db:
+  ## Enable database provisioning
+  enabled: false
+
+  ## Enable the database migration Job
+  ## Runs migrate.sh against the configured Postgres instance on deploy.
+  ## Set to false after initial migration or when using an external migration tool.
+  migration:
+    enabled: true
+
+  ## PostgreSQL container image configuration
+  image:
+    repository: supabase/postgres
+    pullPolicy: IfNotPresent
+    tag: "15.8.1.085"
+
+  ## Secrets used to pull private images
+  imagePullSecrets: []
+
+  ## Number of PostgreSQL replicas
+  ## NOTE: PostgreSQL does not support horizontal scaling without
+  ## replication tooling. Keep this as 1 unless you know what you're doing.
+  replicaCount: 1
+
+  ## Service Account configuration
+  serviceAccount:
+    create: true
+    annotations: {}
+    ## The name of the service account to use.
+    ## If not set and create is true, a name is generated using the fullname template
+    name: ""
+
+  nameOverride: ""
+  fullnameOverride: ""
+  livenessProbe: {}
+  readinessProbe: {}
+  podAnnotations: {}
+  podSecurityContext:
+  securityContext: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+  service:
+    type: ClusterIP
+    port: 5432
+
+  environment:
+    POSTGRES_HOST: supabase-db.lokesh.private
+    PGPORT: "5432"
+    POSTGRES_PORT: "5432"
+    JWT_EXP: 3600
+    # POSTGRES_HOST_AUTH_METHOD: md5
+    ## Enable SSL for postgres by specifying paths for mounted certificate key pair
+    # POSTGRES_SSL_CERT: /path/to/ssl/server.crt
+    # POSTGRES_SSL_KEY: /path/to/ssl/server.key
+
+  ## Extra volume mounts
+  # volumeMounts:
+  #   - name: volume_name
+  #     mountPath: /path/to/my/secret
+
+  ## Extra volumes
+  # volumes:
+  #   - name: volume_name
+  #     secret:
+  #       defaultMode: 733
+  #       secretName: my_secret
+  #       items:
+  #       - key: my_secret.txt
+  #         path: name_of_file_in_container.txt
+
+  ## Resource requests and limits
+  ## NOTE: It is recommended to leave this empty by default
+  ## and explicitly configure it according to your cluster capacity
+  resources: {}
+
+  ## Persistent volume configuration
+  persistence:
+    enabled: false
+    storageClassName: "gp2"
+    annotations: {}
+    size: 8Gi
+    accessModes:
+      - ReadWriteOnce
+    class: ""
+
+  ## TODO: remove autoscaling for database
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 100
+    targetCPUUtilizationPercentage: 80
+    # targetMemoryUtilizationPercentage: 80
+
+  ## Additional migration scripts can be defined here
+  config:
+    # example.sql: |
+    #   \set pguser `echo "$POSTGRES_USER"`
+
+    #   -- Create schema
+    #   create schema if not exists app;
+    #   alter schema app owner to :pguser;
+
+    #   -- Create example table
+    #   create table if not exists app.items (
+    #     id   serial primary key,
+    #     name text not null
+    #   );
+
+    #   -- Set table owner
+    #   alter table app.items owner to :pguser;
+
+## 3. Studio
+##    Supabase Studio web console for managing projects, database, and auth.
+##
+studio:
+  ## Enable studio provisioning
+  enabled: true
+
+  ## Studio container image configuration
+  image:
+    repository: supabase/studio
+    pullPolicy: IfNotPresent
+    tag: "2025.06.30-sha-6f5982d"
+
+  ## Secrets used to pull private images
+  imagePullSecrets: []
+
+  ## Number of Studio replicas
+  replicaCount: 1
+
+  ## Service Account configuration
+  serviceAccount:
+    create: true
+    annotations: {}
+    ## The name of the service account to use.
+    ## If not set and create is true, a name is generated using the fullname template
+    name: ""
+
+  nameOverride: ""
+  fullnameOverride: ""
+  livenessProbe:
+    httpGet:
+      path: /api/platform/profile
+      port: 3000
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    httpGet:
+      path: /api/platform/profile
+      port: 3000
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+  podAnnotations: {}
+  podSecurityContext: {}
+  securityContext: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: app.kubernetes.io/name
+            operator: In
+            values:
+            - supabase-studio
+        topologyKey: topology.kubernetes.io/zone
+
+  service:
+    type: ClusterIP
+    port: 3000
+
+  environment:
+    HOSTNAME: "::"
+    STUDIO_PORT: "3000"
+    POSTGRES_PORT: 5432
+    DEFAULT_ORGANIZATION_NAME: Supabase
+    DEFAULT_PROJECT_NAME: Supabase Production
+    SUPABASE_PUBLIC_URL: https://supabase.clokesh.me
+    NEXT_PUBLIC_ENABLE_LOGS: true
+    ## Set value to bigquery to use Big Query backend for analytics (postgres or bigquery)
+    NEXT_ANALYTICS_BACKEND_PROVIDER: postgres
+
+  ## Extra volume mounts
+  # volumeMounts:
+  #   - name: volume_name
+  #     mountPath: /path/to/my/secret
+
+  ## Extra volumes
+  # volumes:
+  #   - name: volume_name
+  #     secret:
+  #       defaultMode: 733
+  #       secretName: my_secret
+  #       items:
+  #       - key: my_secret.txt
+  #         path: name_of_file_in_container.txt
+
+  ## Resource requests and limits
+  ## NOTE: It is recommended to leave this empty by default
+  ## and explicitly configure it according to your cluster capacity
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+  ## Horizontal Pod Autoscaler configuration
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+    # targetMemoryUtilizationPercentage: 80
+
+## 4. Auth
+##    GoTrue handles authentication flows, OTP delivery, and JWT management.
+##
+auth:
+  ## Enable auth provisioning
+  enabled: true
+
+  ## Auth container image configuration
+  image:
+    repository: supabase/gotrue
+    pullPolicy: IfNotPresent
+    tag: "v2.182.1"
+
+  ## Secrets used to pull private images
+  imagePullSecrets: []
+
+  ## Number of Auth replicas
+  replicaCount: 1
+
+  ## Service Account configuration
+  serviceAccount:
+    create: true
+    annotations: {}
+    ## The name of the service account to use.
+    ## If not set and create is true, a name is generated using the fullname template
+    name: ""
+
+  nameOverride: ""
+  fullnameOverride: ""
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 9999
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: 9999
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+  podAnnotations: {}
+  podSecurityContext: {}
+  securityContext: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: app.kubernetes.io/name
+            operator: In
+            values:
+            - supabase-auth
+        topologyKey: topology.kubernetes.io/zone
+
+  service:
+    type: ClusterIP
+    port: 9999
+
+  environment:
+    ## Override the database hostname if using an external database
+    DB_HOST: supabase-db.lokesh.private
+    DB_USER: supabase_admin
+    DB_PORT: 5432
+    DB_DRIVER: postgres
+    ## SSL mode options: disable, allow, prefer, require, verify-ca, verify-full
+    DB_SSL: disable
+    API_EXTERNAL_URL: https://api.clokesh.me
+    GOTRUE_API_HOST: "0.0.0.0"
+    GOTRUE_API_PORT: "9999"
+    GOTRUE_SITE_URL: https://app.clokesh.me
+    GOTRUE_URI_ALLOW_LIST: "*"
+    GOTRUE_DISABLE_SIGNUP: "false"
+    GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
+    GOTRUE_JWT_ADMIN_ROLES: service_role
+    GOTRUE_JWT_AUD: authenticated
+    GOTRUE_JWT_EXP: "3600"
+    GOTRUE_EXTERNAL_EMAIL_ENABLED: "false"
+    GOTRUE_MAILER_AUTOCONFIRM: "true"
+    GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED: "false"
+    # GOTRUE_MAILER_SECURE_EMAIL_CHANGE_ENABLED: true
+    # GOTRUE_SMTP_MAX_FREQUENCY: 1s
+    GOTRUE_SMTP_ADMIN_EMAIL: "SMTP_ADMIN_MAIL"
+    GOTRUE_SMTP_HOST: "SMTP_HOST"
+    GOTRUE_SMTP_PORT: "123"
+    GOTRUE_EXTERNAL_PHONE_ENABLED: "false"
+    GOTRUE_SMS_AUTOCONFIRM: "false"
+    GOTRUE_SMTP_SENDER_NAME: "SMTP_SENDER_NAME"
+    GOTRUE_MAILER_URLPATHS_INVITE: "/auth/v1/verify"
+    GOTRUE_MAILER_URLPATHS_CONFIRMATION: "/auth/v1/verify"
+    GOTRUE_MAILER_URLPATHS_RECOVERY: "/auth/v1/verify"
+    GOTRUE_MAILER_URLPATHS_EMAIL_CHANGE: "/auth/v1/verify"
+    ## Uncomment to enable custom access token hook. Please see: https://supabase.com/docs/guides/auth/auth-hooks
+    ## for full list of hooks and additional details about custom_access_token_hook
+    # GOTRUE_HOOK_CUSTOM_ACCESS_TOKEN_ENABLED: "true"
+    # GOTRUE_HOOK_CUSTOM_ACCESS_TOKEN_URI: "pg-functions://postgres/public/custom_access_token_hook"
+    # GOTRUE_HOOK_CUSTOM_ACCESS_TOKEN_SECRETS: "<standard-base64-secret>"
+    # GOTRUE_HOOK_MFA_VERIFICATION_ATTEMPT_ENABLED: "true"
+    # GOTRUE_HOOK_MFA_VERIFICATION_ATTEMPT_URI: "pg-functions://postgres/public/mfa_verification_attempt"
+    # GOTRUE_HOOK_PASSWORD_VERIFICATION_ATTEMPT_ENABLED: "true"
+    # GOTRUE_HOOK_PASSWORD_VERIFICATION_ATTEMPT_URI: "pg-functions://postgres/public/password_verification_attempt"
+    # GOTRUE_HOOK_SEND_SMS_ENABLED: "false"
+    # GOTRUE_HOOK_SEND_SMS_URI: "pg-functions://postgres/public/custom_access_token_hook"
+    # GOTRUE_HOOK_SEND_SMS_SECRETS: "v1,whsec_VGhpcyBpcyBhbiBleGFtcGxlIG9mIGEgc2hvcnRlciBCYXNlNjQgc3RyaW5n"
+    # GOTRUE_HOOK_SEND_EMAIL_ENABLED: "false"
+    # GOTRUE_HOOK_SEND_EMAIL_URI: "http://host.docker.internal:54321/functions/v1/email_sender"
+    # GOTRUE_HOOK_SEND_EMAIL_SECRETS: "v1,whsec_VGhpcyBpcyBhbiBleGFtcGxlIG9mIGEgc2hvcnRlciBCYXNlNjQgc3RyaW5n"
+
+  envFrom: []
+
+  ## Extra volume mounts
+  # volumeMounts:
+  #   - name: volume_name
+  #     mountPath: /path/to/my/secret
+
+  ## Extra volumes
+  # volumes:
+  #   - name: volume_name
+  #     secret:
+  #       defaultMode: 733
+  #       secretName: my_secret
+  #       items:
+  #       - key: my_secret.txt
+  #         path: name_of_file_in_container.txt
+
+  ## Resource requests and limits
+  ## NOTE: It is recommended to leave this empty by default
+  ## and explicitly configure it according to your cluster capacity
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+  ## Horizontal Pod Autoscaler configuration
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+    # targetMemoryUtilizationPercentage: 80
+
+## 5. REST
+##    PostgREST exposes database schemas as RESTful endpoints for anonymous and service clients.
+##
+rest:
+  ## Enable PostgREST provisioning
+  enabled: true
+  replicaCount: 1
+  ## PostgREST container image configuration
+  image:
+    repository: postgrest/postgrest
+    pullPolicy: IfNotPresent
+    tag: "v13.0.7"
+
+  ## Secrets used to pull private images
+  imagePullSecrets: []
+
+  ## Service Account configuration
+  serviceAccount:
+    create: true
+    annotations: {}
+    ## The name of the service account to use.
+    ## If not set and create is true, a name is generated using the fullname template
+    name: ""
+
+  nameOverride: ""
+  fullnameOverride: ""
+  livenessProbe: {}
+  readinessProbe: {}
+  podAnnotations: {}
+  podSecurityContext: {}
+  securityContext: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: app.kubernetes.io/name
+            operator: In
+            values:
+            - supabase-rest
+        topologyKey: topology.kubernetes.io/zone
+
+  service:
+    type: ClusterIP
+    port: 3000
+
+  environment:
+    ## Override the database hostname if using an external database
+    DB_HOST: supabase-db.lokesh.private
+    DB_USER: authenticator
+    DB_PORT: 5432
+    DB_DRIVER: postgres
+    ## SSL mode options: disable, allow, prefer, require, verify-ca, verify-full
+    DB_SSL: disable
+    PGRST_DB_SCHEMAS: public,storage,graphql_public
+    PGRST_DB_ANON_ROLE: anon
+    PGRST_DB_USE_LEGACY_GUCS: false
+    PGRST_APP_SETTINGS_JWT_EXP: 3600
+
+  ## Extra volume mounts
+  # volumeMounts:
+  #   - name: volume_name
+  #     mountPath: /path/to/my/secret
+
+  ## Extra volumes
+  # volumes:
+  #   - name: volume_name
+  #     secret:
+  #       defaultMode: 733
+  #       secretName: my_secret
+  #       items:
+  #       - key: my_secret.txt
+  #         path: name_of_file_in_container.txt
+
+  ## Resource requests and limits
+  ## NOTE: It is recommended to leave this empty by default
+  ## and explicitly configure it according to your cluster capacity
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+  ## Horizontal Pod Autoscaler configuration
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+    # targetMemoryUtilizationPercentage: 80
+
+## 6. Realtime
+##    Realtime delivers database change events and presence updates over websockets.
+##
+realtime:
+  ## Enable realtime provisioning
+  enabled: true
+  replicaCount: 1
+  ## Realtime container image configuration
+  image:
+    repository: supabase/realtime
+    pullPolicy: IfNotPresent
+    tag: "v2.63.0"
+
+  ## Secrets used to pull private images
+  imagePullSecrets: []
+
+  ## Service Account configuration
+  serviceAccount:
+    create: true
+    annotations: {}
+    ## The name of the service account to use.
+    ## If not set and create is true, a name is generated using the fullname template
+    name: ""
+
+  nameOverride: ""
+  fullnameOverride: ""
+  livenessProbe: {}
+  readinessProbe: {}
+  podAnnotations: {}
+  podSecurityContext: {}
+  securityContext: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: app.kubernetes.io/name
+            operator: In
+            values:
+            - supabase-realtime
+        topologyKey: topology.kubernetes.io/zone
+
+  service:
+    type: ClusterIP
+    port: 4000
+
+  environment:
+    ## Override the database hostname if using an external database
+    DB_HOST: supabase-db.lokesh.private
+    DB_USER: supabase_admin
+    DB_PORT: 5432
+    ## Set to true to enforce TLS connections to Postgres
+    DB_SSL: false
+    PORT: "4000"
+    FLY_ALLOC_ID: fly123
+    FLY_APP_NAME: realtime
+    ENABLE_TAILSCALE: "false"
+    DB_AFTER_CONNECT_QUERY: "SET search_path TO _realtime"
+    DB_ENC_KEY: supabaserealtime
+    ERL_AFLAGS: -proto_dist inet_tcp
+    DNS_NODES: "''"
+    RLIMIT_NOFILE: "10000"
+    APP_NAME: realtime
+    SEED_SELF_HOST: true
+    RUN_JANITOR: true
+
+  ## Extra volume mounts
+  # volumeMounts:
+  #   - name: volume_name
+  #     mountPath: /path/to/my/secret
+
+  ## Extra volumes
+  # volumes:
+  #   - name: volume_name
+  #     secret:
+  #       defaultMode: 733
+  #       secretName: my_secret
+  #       items:
+  #       - key: my_secret.txt
+  #         path: name_of_file_in_container.txt
+
+  ## Resource requests and limits
+  ## NOTE: It is recommended to leave this empty by default
+  ## and explicitly configure it according to your cluster capacity
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 200m
+      memory: 512Mi
+
+  ## Horizontal Pod Autoscaler configuration
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+    # targetMemoryUtilizationPercentage: 80
+
+## 7. Meta
+##    Postgres Meta offers a lightweight Postgres management API for dashboards and automations.
+##
+meta:
+  ## Enable meta provisioning
+  enabled: true
+
+  ## Meta container image configuration
+  image:
+    repository: supabase/postgres-meta
+    pullPolicy: IfNotPresent
+    tag: "v0.93.1"
+
+  ## Secrets used to pull private images
+  imagePullSecrets: []
+
+  ## Number of Meta replicas
+  replicaCount: 1
+
+  ## Service Account configuration
+  serviceAccount:
+    create: true
+    annotations: {}
+    ## The name of the service account to use.
+    ## If not set and create is true, a name is generated using the fullname template
+    name: ""
+
+  nameOverride: ""
+  fullnameOverride: ""
+  livenessProbe: {}
+  readinessProbe: {}
+  podAnnotations: {}
+  podSecurityContext: {}
+  securityContext: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: app.kubernetes.io/name
+            operator: In
+            values:
+            - supabase-meta
+        topologyKey: topology.kubernetes.io/zone
+
+  service:
+    type: ClusterIP
+    port: 8080
+
+  environment:
+    ## Override the database hostname if using an external database
+    DB_HOST: supabase-db.lokesh.private
+    DB_USER: supabase_admin
+    DB_PORT: 5432
+    DB_DRIVER: postgres
+    ## SSL mode options: disable, allow, prefer, require, verify-ca, verify-full
+    DB_SSL: disable
+    PG_META_PORT: "8080"
+
+  ## Extra volume mounts
+  # volumeMounts:
+  #   - name: volume_name
+  #     mountPath: /path/to/my/secret
+
+  ## Extra volumes
+  # volumes:
+  #   - name: volume_name
+  #     secret:
+  #       defaultMode: 733
+  #       secretName: my_secret
+  #       items:
+  #       - key: my_secret.txt
+  #         path: name_of_file_in_container.txt
+
+  ## Resource requests and limits
+  ## NOTE: It is recommended to leave this empty by default
+  ## and explicitly configure it according to your cluster capacity
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+  ## Horizontal Pod Autoscaler configuration
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+    # targetMemoryUtilizationPercentage: 80
+
+## 8. Storage
+##    Storage API handles file uploads, policies, and optional image transformations.
+##
+storage:
+  ## Enable storage provisioning
+  enabled: true
+
+  ## Storage container image configuration
+  image:
+    repository: supabase/storage-api
+    pullPolicy: IfNotPresent
+    tag: "v1.29.0"
+
+  ## Secrets used to pull private images
+  imagePullSecrets: []
+
+  ## Number of Storage replicas
+  replicaCount: 1
+
+  ## Service Account configuration
+  serviceAccount:
+    create: true
+    annotations: {}
+    ## The name of the service account to use.
+    ## If not set and create is true, a name is generated using the fullname template
+    name: ""
+
+  nameOverride: ""
+  fullnameOverride: ""
+  livenessProbe: {}
+  livenessProbe:
+    httpGet:
+      path: /status
+      port: 5000
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    httpGet:
+      path: /status
+      port: 5000
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+  podSecurityContext: {}
+  securityContext: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: app.kubernetes.io/name
+            operator: In
+            values:
+            - supabase-storage
+        topologyKey: topology.kubernetes.io/zone
+
+  service:
+    type: ClusterIP
+    port: 5000
+
+  environment:
+    ## Override the database hostname if using an external database
+    DB_HOST: supabase-db.lokesh.private
+    DB_USER: supabase_storage_admin
+    DB_PORT: 5432
+    DB_DRIVER: postgres
+    ## SSL mode options: disable, allow, prefer, require, verify-ca, verify-full
+    DB_SSL: disable
+    REQUEST_ALLOW_X_FORWARDED_PATH: "true"
+    PGOPTIONS: -c search_path=storage,public
+    FILE_SIZE_LIMIT: "52428800"
+    ## Select file for local PVs or s3 when delegating to an external bucket
+    STORAGE_BACKEND: s3
+    FILE_STORAGE_BACKEND_PATH: /
+    TENANT_ID: stackai
+    REGION: us-east-1
+    GLOBAL_S3_BUCKET: stackai-supabase
+    ENABLE_IMAGE_TRANSFORMATION: "true"
+    ## Set variables below and secret.s3 above to enable S3 storage bucket
+    ## If using this chart's minio, skip the endpoint and protocol below
+    # GLOBAL_S3_ENDPOINT: http://minio:9000
+    # GLOBAL_S3_PROTOCOL: http
+    GLOBAL_S3_FORCE_PATH_STYLE: true
+    AWS_DEFAULT_REGION: us-east-1
+
+  ## Extra volume mounts
+  # volumeMounts:
+  #   - name: volume_name
+  #     mountPath: /path/to/my/secret
+
+  ## Extra volumes
+  # volumes:
+  #   - name: volume_name
+  #     secret:
+  #       defaultMode: 733
+  #       secretName: my_secret
+  #       items:
+  #       - key: my_secret.txt
+  #         path: name_of_file_in_container.txt
+
+  ## Resource requests and limits
+  ## NOTE: It is recommended to leave this empty by default
+  ## and explicitly configure it according to your cluster capacity
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+  ## Persistent volume configuration
+  persistence:
+    enabled: true
+    storageClassName: "gp2"
+    annotations: {}
+    size: 10Gi
+    accessModes:
+      - ReadWriteOnce
+    class: ""
+
+  ## TODO: remove autoscaling for storage
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+    # targetMemoryUtilizationPercentage: 80
+
+## 9. Image Proxy
+##    Imgproxy provides fast, on-the-fly image optimization for storage assets.
+##
+imgproxy:
+  ## Enable imgproxy provisioning
+  enabled: true
+
+  ## Imgproxy container image configuration
+  image:
+    repository: darthsim/imgproxy
+    pullPolicy: IfNotPresent
+    tag: "v3.8.0"
+
+  ## Secrets used to pull private images
+  imagePullSecrets: []
+
+  ## Number of Imgproxy replicas
+  replicaCount: 1
+
+  ## Service Account configuration
+  serviceAccount:
+    create: true
+    annotations: {}
+    ## The name of the service account to use.
+    ## If not set and create is true, a name is generated using the fullname template
+    name: ""
+
+  nameOverride: ""
+  fullnameOverride: ""
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 5001
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: 5001
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+  podAnnotations: {}
+  podSecurityContext: {}
+  securityContext: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: app.kubernetes.io/name
+            operator: In
+            values:
+            - supabase-imgproxy
+        topologyKey: topology.kubernetes.io/zone
+
+  service:
+    type: ClusterIP
+    port: 5001
+
+  environment:
+    IMGPROXY_BIND: ":5001"
+    IMGPROXY_LOCAL_FILESYSTEM_ROOT: /
+    IMGPROXY_USE_ETAG: "true"
+    IMGPROXY_ENABLE_WEBP_DETECTION: "true"
+
+  ## Extra volume mounts
+  # volumeMounts:
+  #   - name: volume_name
+  #     mountPath: /path/to/my/secret
+
+  ## Extra volumes
+  # volumes:
+  #   - name: volume_name
+  #     secret:
+  #       defaultMode: 733
+  #       secretName: my_secret
+  #       items:
+  #       - key: my_secret.txt
+  #         path: name_of_file_in_container.txt
+
+  ## Resource requests and limits
+  ## NOTE: It is recommended to leave this empty by default
+  ## and explicitly configure it according to your cluster capacity
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+  ## Persistent volume configuration
+  persistence:
+    enabled: true
+    storageClassName: "gp2"
+    annotations: {}
+    size: 10Gi
+    accessModes:
+      - ReadWriteOnce
+    class: ""
+
+  ## TODO: remove autoscaling for imgproxy
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+    # targetMemoryUtilizationPercentage: 80
+
+## 10. Kong
+##     Kong serves as the API gateway, routing external traffic to Supabase services.
+##
+kong:
+  ## Enable Kong provisioning
+  enabled: true
+
+  ## Kong container image configuration
+  image:
+    repository: kong
+    pullPolicy: IfNotPresent
+    tag: "2.8.1"
+
+  ## Secrets used to pull private images
+  imagePullSecrets: []
+
+  ## Number of Kong replicas
+  replicaCount: 1
+
+  ## Service Account configuration
+  serviceAccount:
+    create: true
+    annotations: {}
+    ## The name of the service account to use.
+    ## If not set and create is true, a name is generated using the fullname template
+    name: ""
+
+  nameOverride: ""
+  fullnameOverride: ""
+  livenessProbe: {}
+  readinessProbe: {}
+  podAnnotations: {}
+  podSecurityContext: {}
+  securityContext: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: app.kubernetes.io/name
+            operator: In
+            values:
+            - supabase-kong
+        topologyKey: topology.kubernetes.io/zone
+
+  service:
+    type: ClusterIP
+    port: 8000
+
+  environment:
+    KONG_DATABASE: "off"
+    KONG_DECLARATIVE_CONFIG: /usr/local/kong/kong.yml
+    ## https://github.com/supabase/cli/issues/14
+    KONG_DNS_ORDER: LAST,A,CNAME
+    KONG_PLUGINS: request-transformer,cors,key-auth,acl,basic-auth
+    KONG_NGINX_PROXY_PROXY_BUFFER_SIZE: 160k
+    KONG_NGINX_PROXY_PROXY_BUFFERS: 64 160k
+    KONG_LOG_LEVEL: warn
+
+  k8ingress:
+    enabled: true
+    hosts: 
+      - supabase.clokesh.me
+
+  ## Ingress configuration
+  ingress:
+    enabled: false
+    className: "nginx"
+    annotations:
+      nginx.ingress.kubernetes.io/rewrite-target: /
+      # cert-manager.io/cluster-issuer: "letsencrypt-staging"
+      # kubernetes.io/tls-acme: "true"
+    tls: []
+      ## Define TLS secret for SSL termination.
+      ## This section can be left blank if using cluster certificate manager.
+      ## Otherwise, setting this in tandem with certificate manager will overwrite the secret name.
+      # - secretName: example-com-tls
+      #   hosts:
+      #     - example.com
+    hosts:
+      - host: supabase.clokesh.me
+        paths:
+          - path: /
+            pathType: Prefix
+
+  ## Extra volume mounts
+  # volumeMounts:
+  #   - name: volume_name
+  #     mountPath: /path/to/my/secret
+
+  ## Extra volumes
+  # volumes:
+  #   - name: volume_name
+  #     secret:
+  #       defaultMode: 733
+  #       secretName: my_secret
+  #       items:
+  #       - key: my_secret.txt
+  #         path: name_of_file_in_container.txt
+
+  ## Resource requests and limits
+  ## NOTE: It is recommended to leave this empty by default
+  ## and explicitly configure it according to your cluster capacity
+  resources:
+    requests:
+      cpu: 300m
+      memory: 2Gi
+    limits:
+      cpu: 500m
+      memory: 3Gi
+
+  ## Horizontal Pod Autoscaler configuration
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+    # targetMemoryUtilizationPercentage: 80
+
+## 11. Analytics
+##     Logflare captures structured logs and metrics for dashboards or BigQuery forwarding.
+##
+analytics:
+  ## Enable Analytics provisioning
+  enabled: true
+
+  ## Analytics container image configuration
+  image:
+    repository: supabase/logflare
+    pullPolicy: IfNotPresent
+    tag: "1.22.6" # 1.10.0
+
+  ## Secrets used to pull private images
+  imagePullSecrets: []
+
+  ## Number of Analytics replicas
+  replicaCount: 1
+
+  ## Service Account configuration
+  serviceAccount:
+    create: true
+    annotations: {}
+    ## The name of the service account to use.
+    ## If not set and create is true, a name is generated using the fullname template
+    name: ""
+
+  nameOverride: ""
+  fullnameOverride: ""
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 4000
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: 4000
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+  podAnnotations: {}
+  podSecurityContext: {}
+  securityContext: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: app.kubernetes.io/name
+            operator: In
+            values:
+            - supabase-analytics
+        topologyKey: topology.kubernetes.io/zone
+
+  service:
+    type: ClusterIP
+    port: 4000
+
+  environment:
+    LOGFLARE_NODE_HOST: 127.0.0.1
+    ## Override the database hostname if using an external database
+    DB_HOST: supabase-db.lokesh.private
+    DB_USERNAME: supabase_admin
+    DB_DATABASE: _supabase
+    DB_PORT: 5432
+    DB_DRIVER: postgresql
+    DB_SCHEMA: _analytics
+    POSTGRES_BACKEND_SCHEMA: _analytics
+    LOGFLARE_SINGLE_TENANT: "true"
+    LOGFLARE_SUPABASE_MODE: "true"
+    LOGFLARE_FEATURE_FLAG_OVERRIDE: multibackend=true
+
+  ## Enable BigQuery backend for analytics
+  bigQuery:
+    enabled: false
+    projectId: google-project-id
+    projectNumber: google-project-number
+    gcloudJson: ""
+
+  ## Extra volume mounts
+  # volumeMounts:
+  #   - name: volume_name
+  #     mountPath: /path/to/my/secret
+
+  ## Extra volumes
+  # volumes:
+  #   - name: volume_name
+  #     secret:
+  #       defaultMode: 733
+  #       secretName: my_secret
+  #       items:
+  #       - key: my_secret.txt
+  #         path: name_of_file_in_container.txt
+
+  ## Resource requests and limits
+  ## NOTE: It is recommended to leave this empty by default
+  ## and explicitly configure it according to your cluster capacity
+  resources:
+    requests:
+      cpu: 300m
+      memory: 1Gi
+    limits:
+      cpu: 500m
+      memory: 2Gi
+
+  ## Horizontal Pod Autoscaler configuration
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+    # targetMemoryUtilizationPercentage: 80
+
+## 12. Vector
+##     Vector ships container logs to destinations defined in its configuration.
+##
+vector:
+  ## Enable Vector provisioning
+  enabled: true
+
+  ## Vector container image configuration
+  image:
+    repository: timberio/vector
+    pullPolicy: IfNotPresent
+    tag: "0.28.1-alpine"
+
+  ## Secrets used to pull private images
+  imagePullSecrets: []
+
+  ## Number of Vector replicas
+  replicaCount: 1
+
+  ## Service Account configuration
+  serviceAccount:
+    create: true
+    annotations: {}
+    ## The name of the service account to use.
+    ## If not set and create is true, a name is generated using the fullname template
+    name: ""
+
+  nameOverride: ""
+  fullnameOverride: ""
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 9001
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: 9001
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+  podAnnotations: {}
+  podSecurityContext: {}
+  securityContext: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: app.kubernetes.io/name
+            operator: In
+            values:
+            - supabase-vector
+        topologyKey: topology.kubernetes.io/zone
+
+  service:
+    type: ClusterIP
+    port: 9001
+
+  ## Extra volume mounts
+  # volumeMounts:
+  #   - name: volume_name
+  #     mountPath: /path/to/my/secret
+
+  ## Extra volumes
+  # volumes:
+  #   - name: volume_name
+  #     secret:
+  #       defaultMode: 733
+  #       secretName: my_secret
+  #       items:
+  #       - key: my_secret.txt
+  #         path: name_of_file_in_container.txt
+
+  ## Resource requests and limits
+  ## NOTE: It is recommended to leave this empty by default
+  ## and explicitly configure it according to your cluster capacity
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+  ## Horizontal Pod Autoscaler configuration
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+    # targetMemoryUtilizationPercentage: 80
+
+## 13. Functions
+##     Edge Functions (Deno) power custom logic deployed alongside Supabase.
+##
+functions:
+  ## Enable Functions provisioning
+  enabled: true
+
+  ## Functions container image configuration
+  image:
+    repository: supabase/edge-runtime
+    pullPolicy: IfNotPresent
+    tag: "v1.68.4"
+
+  ## Secrets used to pull private images
+  imagePullSecrets: []
+
+  ## Number of Functions replicas
+  replicaCount: 1
+
+  ## Service Account configuration
+  serviceAccount:
+    create: true
+    annotations: {}
+    ## The name of the service account to use.
+    ## If not set and create is true, a name is generated using the fullname template
+    name: ""
+
+  nameOverride: ""
+  fullnameOverride: ""
+  livenessProbe: {}
+  readinessProbe: {}
+  podAnnotations: {}
+  podSecurityContext: {}
+  securityContext: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: app.kubernetes.io/name
+            operator: In
+            values:
+            - supabase-functions
+        topologyKey: topology.kubernetes.io/zone
+
+  service:
+    type: ClusterIP
+    port: 9000
+
+  environment:
+    ## Override the database hostname if using an external database
+    DB_HOST: supabase-db.lokesh.private
+    DB_USERNAME: postgres
+    DB_PORT: 5432
+    DB_DRIVER: postgresql
+    ## SSL mode options: disable, allow, prefer, require, verify-ca, verify-full
+    DB_SSL: disable
+    VERIFY_JWT: false
+
+  envFrom: []
+
+  ## Mount user functions
+  # volumeMounts:
+  #   - name: my_functions
+  #     mountPath: /home/deno/functions/main/main
+
+  ## Functions volume
+  # volumes:
+  #   - name: my_functions
+  #     secret:
+  #       defaultMode: 733
+  #       secretName: my_secret
+  #       items:
+  #       - key: my_secret.ts
+  #         path: name_of_file_in_container.ts
+
+  ## Resource requests and limits
+  ## NOTE: It is recommended to leave this empty by default
+  ## and explicitly configure it according to your cluster capacity
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+  ## Horizontal Pod Autoscaler configuration
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+    # targetMemoryUtilizationPercentage: 80
+
+## 14. Minio
+##     Optional S3-compatible backend leveraged by the Storage API when no external bucket exists.
+##
+minio:
+  ## Enable Minio provisioning
+  enabled: false
+
+  ## Minio container image configuration
+  image:
+    repository: minio/minio
+    pullPolicy: IfNotPresent
+    tag: "RELEASE.2025-09-07T16-13-09Z"
+
+  ## Secrets used to pull private images
+  imagePullSecrets: []
+
+  ## Number of Minio replicas
+  replicaCount: 1
+
+  ## Service Account configuration
+  serviceAccount:
+    create: true
+    annotations: {}
+    ## The name of the service account to use.
+    ## If not set and create is true, a name is generated using the fullname template
+    name: ""
+
+  nameOverride: ""
+  fullnameOverride: ""
+  livenessProbe: {}
+  readinessProbe: {}
+  podAnnotations: {}
+  podSecurityContext: {}
+  securityContext: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+  service:
+    type: ClusterIP
+    port: 9000
+
+  environment: {}
+
+  ## Extra volume mounts
+  # volumeMounts:
+  #   - name: volume_name
+  #     mountPath: /path/to/my/secret
+
+  ## Extra volumes
+  # volumes:
+  #   - name: volume_name
+  #     secret:
+  #       defaultMode: 733
+  #       secretName: my_secret
+  #       items:
+  #       - key: my_secret.txt
+  #         path: name_of_file_in_container.txt
+
+  ## Resource requests and limits
+  ## NOTE: It is recommended to leave this empty by default
+  ## and explicitly configure it according to your cluster capacity
+  resources: {}
+
+  ## Persistent volume configuration
+  persistence:
+    enabled: false
+    storageClassName: ""
+    annotations: {}
+    size: 10Gi
+    accessModes:
+      - ReadWriteOnce
+    class: ""
+
+  ## TODO: remove autoscaling for minio
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 100
+    targetCPUUtilizationPercentage: 80
+    # targetMemoryUtilizationPercentage: 80
