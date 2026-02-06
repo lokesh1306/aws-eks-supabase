@@ -836,7 +836,7 @@ storage:
   imagePullSecrets: []
 
   ## Number of Storage replicas
-  replicaCount: 2
+  replicaCount: 1
 
   ## Service Account configuration
   serviceAccount:
@@ -948,7 +948,7 @@ storage:
   ## TODO: remove autoscaling for storage
   autoscaling:
     enabled: true
-    minReplicas: 2
+    minReplicas: 1
     maxReplicas: 5
     targetCPUUtilizationPercentage: 70
     # targetMemoryUtilizationPercentage: 80
@@ -970,7 +970,7 @@ imgproxy:
   imagePullSecrets: []
 
   ## Number of Imgproxy replicas
-  replicaCount: 2
+  replicaCount: 1
 
   ## Service Account configuration
   serviceAccount:
@@ -1063,7 +1063,7 @@ imgproxy:
   ## TODO: remove autoscaling for imgproxy
   autoscaling:
     enabled: true
-    minReplicas: 2
+    minReplicas: 1
     maxReplicas: 5
     targetCPUUtilizationPercentage: 70
     # targetMemoryUtilizationPercentage: 80
