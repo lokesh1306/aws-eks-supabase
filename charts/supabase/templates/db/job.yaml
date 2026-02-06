@@ -1,0 +1,69 @@
+{{- if .Values.db.migration.enabled -}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "supabase.fullname" . }}-db-migrate
+  labels:
+    {{- include "supabase.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  backoffLimit: 1
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: postgres:15-alpine
+          imagePullPolicy: IfNotPresent
+          workingDir: /migration
+          command: ["/bin/sh", "/migration/migrate.sh"]
+          env:
+            - name: POSTGRES_HOST
+              value: {{ .Values.db.environment.POSTGRES_HOST | quote }}
+            - name: POSTGRES_PORT
+              value: {{ .Values.db.environment.POSTGRES_PORT | quote }}
+            - name: POSTGRES_USER
+              value: "supabase_admin"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  {{- if .Values.secret.db.secretRef }}
+                  name: {{ .Values.secret.db.secretRef }}
+                  key: {{ .Values.secret.db.secretRefKey.password | default "password" }}
+                  {{- else }}
+                  name: {{ include "supabase.secret.db" . }}
+                  key: password
+                  {{- end }}
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  {{- if .Values.secret.db.secretRef }}
+                  name: {{ .Values.secret.db.secretRef }}
+                  key: {{ .Values.secret.db.secretRefKey.database | default "database" }}
+                  {{- else }}
+                  name: {{ include "supabase.secret.db" . }}
+                  key: database
+                  {{- end }}
+          volumeMounts:
+            - name: migrate-sh
+              mountPath: /migration/migrate.sh
+              subPath: migrate.sh
+            - name: init-scripts
+              mountPath: /migration/initdb/init-scripts
+            - name: migrations
+              mountPath: /migration/initdb/migrations
+      volumes:
+        - name: migrate-sh
+          configMap:
+            name: {{ include "supabase.fullname" . }}-db-migrate-sh
+        - name: init-scripts
+          configMap:
+            name: {{ include "supabase.fullname" . }}-db-init-scripts
+        - name: migrations
+          configMap:
+            name: {{ include "supabase.fullname" . }}-db-migrations
+{{- end }}

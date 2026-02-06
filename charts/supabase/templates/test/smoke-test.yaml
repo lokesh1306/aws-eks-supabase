@@ -1,0 +1,255 @@
+{{- if .Values.kong.enabled -}}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "supabase.fullname" . }}-test-smoke-test-script
+  labels:
+    {{- include "supabase.labels" . | nindent 4 }}
+data:
+  smoke-test.sh: |
+    #!/bin/sh
+    set +e
+
+    PASSED=0
+    FAILED=0
+
+    print_header() {
+      echo ""
+      echo "--- $1 ---"
+      echo ""
+    }
+
+    print_test() {
+      echo "  Testing: $1"
+    }
+
+    print_pass() {
+      echo "$1"
+      PASSED=$((PASSED+1))
+    }
+
+    print_fail() {
+      echo "$1"
+      FAILED=$((FAILED+1))
+    }
+
+    print_info() {
+      echo "  → $1"
+    }
+
+    # Verify secrets are loaded
+    print_header "Verifying Credentials"
+    if [ -z "$ANON_KEY" ] || [ -z "$SERVICE_KEY" ]; then
+      print_fail "JWT secrets not loaded"
+      exit 1
+    fi
+    print_pass "JWT secrets loaded"
+
+    # Test Kong/Studio
+    {{- if .Values.kong.enabled }}
+    print_header "Kong API Gateway"
+    print_test "Kong service health"
+    {{- if .Values.secret.dashboard }}
+    HTTP_CODE=$(curl -sL -o /dev/null -w "%{http_code}" -u "$DASHBOARD_USER:$DASHBOARD_PASS" "$BASE_URL/" --max-time 10 2>/dev/null || echo "000")
+    {{- else }}
+    HTTP_CODE=$(curl -sL -o /dev/null -w "%{http_code}" "$BASE_URL/" --max-time 10 2>/dev/null || echo "000")
+    {{- end }}
+    if echo "$HTTP_CODE" | grep -qE '^2'; then
+      print_pass "Kong is accessible (HTTP $HTTP_CODE)"
+    else
+      print_fail "Kong is not accessible (HTTP $HTTP_CODE)"
+    fi
+    {{- end }}
+
+    # Test Auth
+    {{- if .Values.auth.enabled }}
+    print_header "Auth Service"
+    print_test "Auth health endpoint"
+    RESPONSE=$(curl -s "$BASE_URL/auth/v1/health" -H "apikey: $ANON_KEY" --max-time 10 2>/dev/null)
+    if echo "$RESPONSE" | grep -q "version"; then
+      print_pass "Auth service is healthy"
+    else
+      print_fail "Auth service health check failed"
+    fi
+    {{- end }}
+
+    # Test REST
+    {{- if .Values.rest.enabled }}
+    print_header "REST Service"
+    print_test "PostgREST endpoint"
+    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/rest/v1/" -H "apikey: $ANON_KEY" --max-time 10 2>/dev/null)
+    if echo "$HTTP_CODE" | grep -qE '^[23]'; then
+      print_pass "PostgREST is responding (HTTP $HTTP_CODE)"
+    else
+      print_fail "PostgREST is not responding (HTTP $HTTP_CODE)"
+    fi
+    {{- end }}
+
+    # Test Realtime
+    {{- if .Values.realtime.enabled }}
+    print_header "Realtime Service"
+    print_test "Realtime service endpoint"
+    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/realtime/v1/" -H "apikey: $ANON_KEY" --max-time 10 2>/dev/null)
+    # 404 is expected for Realtime root - it's a WebSocket service
+    if [ "$HTTP_CODE" = "404" ]; then
+      print_pass "Realtime service is healthy (WebSocket service, HTTP 404 is normal)"
+    elif echo "$HTTP_CODE" | grep -qE '^[23]'; then
+      print_pass "Realtime service is responding (HTTP $HTTP_CODE)"
+    else
+      print_fail "Realtime service unreachable (HTTP $HTTP_CODE)"
+    fi
+    {{- end }}
+
+    # Test Storage
+    {{- if .Values.storage.enabled }}
+    print_header "Storage Service"
+    print_test "Storage buckets endpoint"
+    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/storage/v1/bucket" -H "apikey: $SERVICE_KEY" -H "Authorization: Bearer $SERVICE_KEY" --max-time 10 2>/dev/null)
+    if echo "$HTTP_CODE" | grep -qE '^[23]'; then
+      print_pass "Storage service is responding (HTTP $HTTP_CODE)"
+    else
+      print_fail "Storage service check failed (HTTP $HTTP_CODE)"
+    fi
+    {{- end }}
+
+    # Test Functions
+    {{- if .Values.functions.enabled }}
+    print_header "Edge Functions"
+    print_test "Functions service endpoint"
+    RESPONSE=$(curl -s "$BASE_URL/functions/v1/" --max-time 10 2>/dev/null)
+    if echo "$RESPONSE" | grep -q "missing function name"; then
+      print_pass "Functions service is healthy"
+    else
+      HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/functions/v1/" --max-time 10 2>/dev/null)
+      if echo "$HTTP_CODE" | grep -qE '^[23]'; then
+        print_pass "Functions service is responding (HTTP $HTTP_CODE)"
+      else
+        print_fail "Functions service check failed (HTTP $HTTP_CODE)"
+      fi
+    fi
+    {{- end }}
+
+    # Test Meta
+    {{- if .Values.meta.enabled }}
+    print_header "Meta Service"
+    print_test "Meta service endpoint"
+    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/pg/tables" -H "apikey: $SERVICE_KEY" -H "Authorization: Bearer $SERVICE_KEY" --max-time 10 2>/dev/null)
+    if echo "$HTTP_CODE" | grep -qE '^[23]'; then
+      print_pass "Meta service is responding (HTTP $HTTP_CODE)"
+    else
+      print_fail "Meta service check failed (HTTP $HTTP_CODE)"
+    fi
+    {{- end }}
+
+    # Test Analytics
+    {{- if .Values.analytics.enabled }}
+    print_header "Analytics Service"
+    print_test "Analytics health endpoint"
+    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/analytics/v1/health" --max-time 10 2>/dev/null)
+    if echo "$HTTP_CODE" | grep -qE '^[23]'; then
+      print_pass "Analytics service is responding (HTTP $HTTP_CODE)"
+    else
+      print_fail "Analytics service check failed (HTTP $HTTP_CODE)"
+    fi
+    {{- end }}
+
+    # Summary
+    print_header "Test Summary"
+    TOTAL=$((PASSED + FAILED))
+    echo "Results: $PASSED passed, $FAILED failed (out of $TOTAL total)"
+    echo ""
+
+    if [ "$FAILED" -eq 0 ]; then
+      echo "All tests passed successfully!"
+      exit 0
+    else
+      echo "Some tests failed. Please review the output above."
+      exit 1
+    fi
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "supabase.fullname" . }}-test-smoke-test
+  labels:
+    {{- include "supabase.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    metadata:
+      labels:
+        {{- include "supabase.labels" . | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: test-smoke-test
+          image: curlimages/curl:8.5.0
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - /scripts/smoke-test.sh
+          env:
+            - name: BASE_URL
+              {{- if .Values.kong.k8ingress.enabled }}
+              value: "https://{{ index .Values.kong.k8ingress.hosts 0 }}"
+              {{- else if .Values.kong.ingress.enabled }}
+              value: "https://{{ (index .Values.kong.ingress.hosts 0).host }}"
+              {{- else }}
+              value: "http://{{ include "supabase.kong.fullname" . }}:{{ .Values.kong.service.port }}"
+              {{- end }}
+            - name: ANON_KEY
+              valueFrom:
+                secretKeyRef:
+                  {{- if .Values.secret.jwt.secretRef }}
+                  name: {{ .Values.secret.jwt.secretRef }}
+                  key: {{ .Values.secret.jwt.secretRefKey.anonKey | default "anonKey" }}
+                  {{- else }}
+                  name: {{ include "supabase.secret.jwt" . }}
+                  key: anonKey
+                  {{- end }}
+            - name: SERVICE_KEY
+              valueFrom:
+                secretKeyRef:
+                  {{- if .Values.secret.jwt.secretRef }}
+                  name: {{ .Values.secret.jwt.secretRef }}
+                  key: {{ .Values.secret.jwt.secretRefKey.serviceKey | default "serviceKey" }}
+                  {{- else }}
+                  name: {{ include "supabase.secret.jwt" . }}
+                  key: serviceKey
+                  {{- end }}
+            {{- if .Values.secret.dashboard }}
+            - name: DASHBOARD_USER
+              valueFrom:
+                secretKeyRef:
+                  {{- if .Values.secret.dashboard.secretRef }}
+                  name: {{ .Values.secret.dashboard.secretRef }}
+                  key: {{ .Values.secret.dashboard.secretRefKey.username | default "username" }}
+                  {{- else }}
+                  name: {{ include "supabase.secret.dashboard" . }}
+                  key: username
+                  {{- end }}
+            - name: DASHBOARD_PASS
+              valueFrom:
+                secretKeyRef:
+                  {{- if .Values.secret.dashboard.secretRef }}
+                  name: {{ .Values.secret.dashboard.secretRef }}
+                  key: {{ .Values.secret.dashboard.secretRefKey.password | default "password" }}
+                  {{- else }}
+                  name: {{ include "supabase.secret.dashboard" . }}
+                  key: password
+                  {{- end }}
+            {{- end }}
+          volumeMounts:
+            - name: script
+              mountPath: /scripts
+      volumes:
+        - name: script
+          configMap:
+            name: {{ include "supabase.fullname" . }}-test-smoke-test-script
+            defaultMode: 0755
+{{- end }}
