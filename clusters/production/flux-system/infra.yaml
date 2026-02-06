@@ -28,7 +28,7 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
-  path: ./infra/metrics-server
+  path: ./infra/helm/metrics-server
   prune: true
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
@@ -44,7 +44,7 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
-  path: ./infra/external-secrets/external-secrets-operator
+  path: ./infra/helm/external-secrets/external-secrets-operator
   prune: true
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
@@ -60,7 +60,7 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
-  path: ./infra/external-secrets/external-secrets-backend
+  path: ./infra/helm/external-secrets/external-secrets-backend
   prune: true
   dependsOn:
     - name: external-secrets-operator
@@ -96,7 +96,7 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
-  path: ./infra/istio/istio
+  path: ./infra/helm/istio/istio
   prune: true
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
@@ -112,7 +112,7 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
-  path: ./infra/istio/istio-peerauth
+  path: ./infra/helm/istio/istio-peerauth
   prune: true
   dependsOn:
     - name: istio
@@ -130,7 +130,7 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
-  path: ./infra/external-dns
+  path: ./infra/helm/external-dns
   prune: true
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
@@ -181,7 +181,7 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
-  path: ./infra/supabase
+  path: ./infra/helm/supabase
   prune: true
   dependsOn:
     - name: secrets
@@ -200,5 +200,5 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
-  path: ./infra/velero
+  path: ./infra/helm/velero
   prune: true
