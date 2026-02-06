@@ -176,7 +176,7 @@ db:
   ## Number of PostgreSQL replicas
   ## NOTE: PostgreSQL does not support horizontal scaling without
   ## replication tooling. Keep this as 1 unless you know what you're doing.
-  replicaCount: 1
+  replicaCount: 2
 
   ## Service Account configuration
   serviceAccount:
@@ -244,7 +244,7 @@ db:
   ## TODO: remove autoscaling for database
   autoscaling:
     enabled: true
-    minReplicas: 1
+    minReplicas: 2
     maxReplicas: 100
     targetCPUUtilizationPercentage: 80
     # targetMemoryUtilizationPercentage: 80
@@ -284,7 +284,7 @@ studio:
   imagePullSecrets: []
 
   ## Number of Studio replicas
-  replicaCount: 1
+  replicaCount: 2
 
   ## Service Account configuration
   serviceAccount:
@@ -372,7 +372,7 @@ studio:
   ## Horizontal Pod Autoscaler configuration
   autoscaling:
     enabled: true
-    minReplicas: 1
+    minReplicas: 2
     maxReplicas: 5
     targetCPUUtilizationPercentage: 70
     # targetMemoryUtilizationPercentage: 80
@@ -394,7 +394,7 @@ auth:
   imagePullSecrets: []
 
   ## Number of Auth replicas
-  replicaCount: 1
+  replicaCount: 2
 
   ## Service Account configuration
   serviceAccount:
@@ -522,7 +522,7 @@ auth:
   ## Horizontal Pod Autoscaler configuration
   autoscaling:
     enabled: true
-    minReplicas: 1
+    minReplicas: 2
     maxReplicas: 5
     targetCPUUtilizationPercentage: 70
     # targetMemoryUtilizationPercentage: 80
@@ -533,7 +533,7 @@ auth:
 rest:
   ## Enable PostgREST provisioning
   enabled: true
-  replicaCount: 1
+  replicaCount: 2
   ## PostgREST container image configuration
   image:
     repository: postgrest/postgrest
@@ -617,7 +617,7 @@ rest:
   ## Horizontal Pod Autoscaler configuration
   autoscaling:
     enabled: true
-    minReplicas: 1
+    minReplicas: 2
     maxReplicas: 5
     targetCPUUtilizationPercentage: 70
     # targetMemoryUtilizationPercentage: 80
@@ -628,7 +628,7 @@ rest:
 realtime:
   ## Enable realtime provisioning
   enabled: true
-  replicaCount: 1
+  replicaCount: 2
   ## Realtime container image configuration
   image:
     repository: supabase/realtime
@@ -719,7 +719,7 @@ realtime:
   ## Horizontal Pod Autoscaler configuration
   autoscaling:
     enabled: true
-    minReplicas: 1
+    minReplicas: 2
     maxReplicas: 5
     targetCPUUtilizationPercentage: 70
     # targetMemoryUtilizationPercentage: 80
@@ -741,7 +741,7 @@ meta:
   imagePullSecrets: []
 
   ## Number of Meta replicas
-  replicaCount: 1
+  replicaCount: 2
 
   ## Service Account configuration
   serviceAccount:
@@ -814,7 +814,7 @@ meta:
   ## Horizontal Pod Autoscaler configuration
   autoscaling:
     enabled: true
-    minReplicas: 1
+    minReplicas: 2
     maxReplicas: 5
     targetCPUUtilizationPercentage: 70
     # targetMemoryUtilizationPercentage: 80
@@ -836,7 +836,7 @@ storage:
   imagePullSecrets: []
 
   ## Number of Storage replicas
-  replicaCount: 1
+  replicaCount: 2
 
   ## Service Account configuration
   serviceAccount:
@@ -948,7 +948,7 @@ storage:
   ## TODO: remove autoscaling for storage
   autoscaling:
     enabled: true
-    minReplicas: 1
+    minReplicas: 2
     maxReplicas: 5
     targetCPUUtilizationPercentage: 70
     # targetMemoryUtilizationPercentage: 80
@@ -970,7 +970,7 @@ imgproxy:
   imagePullSecrets: []
 
   ## Number of Imgproxy replicas
-  replicaCount: 1
+  replicaCount: 2
 
   ## Service Account configuration
   serviceAccount:
@@ -1063,7 +1063,7 @@ imgproxy:
   ## TODO: remove autoscaling for imgproxy
   autoscaling:
     enabled: true
-    minReplicas: 1
+    minReplicas: 2
     maxReplicas: 5
     targetCPUUtilizationPercentage: 70
     # targetMemoryUtilizationPercentage: 80
@@ -1085,7 +1085,7 @@ kong:
   imagePullSecrets: []
 
   ## Number of Kong replicas
-  replicaCount: 1
+  replicaCount: 2
 
   ## Service Account configuration
   serviceAccount:
@@ -1184,7 +1184,7 @@ kong:
   ## Horizontal Pod Autoscaler configuration
   autoscaling:
     enabled: true
-    minReplicas: 1
+    minReplicas: 2
     maxReplicas: 5
     targetCPUUtilizationPercentage: 70
     # targetMemoryUtilizationPercentage: 80
@@ -1206,7 +1206,7 @@ analytics:
   imagePullSecrets: []
 
   ## Number of Analytics replicas
-  replicaCount: 1
+  replicaCount: 2
 
   ## Service Account configuration
   serviceAccount:
@@ -1304,7 +1304,7 @@ analytics:
   ## Horizontal Pod Autoscaler configuration
   autoscaling:
     enabled: true
-    minReplicas: 1
+    minReplicas: 2
     maxReplicas: 5
     targetCPUUtilizationPercentage: 70
     # targetMemoryUtilizationPercentage: 80
@@ -1326,7 +1326,7 @@ vector:
   imagePullSecrets: []
 
   ## Number of Vector replicas
-  replicaCount: 1
+  replicaCount: 2
 
   ## Service Account configuration
   serviceAccount:
@@ -1403,7 +1403,7 @@ vector:
   ## Horizontal Pod Autoscaler configuration
   autoscaling:
     enabled: true
-    minReplicas: 1
+    minReplicas: 2
     maxReplicas: 5
     targetCPUUtilizationPercentage: 70
     # targetMemoryUtilizationPercentage: 80
@@ -1425,7 +1425,7 @@ functions:
   imagePullSecrets: []
 
   ## Number of Functions replicas
-  replicaCount: 1
+  replicaCount: 2
 
   ## Service Account configuration
   serviceAccount:
@@ -1500,7 +1500,7 @@ functions:
   ## Horizontal Pod Autoscaler configuration
   autoscaling:
     enabled: true
-    minReplicas: 1
+    minReplicas: 2
     maxReplicas: 5
     targetCPUUtilizationPercentage: 70
     # targetMemoryUtilizationPercentage: 80
@@ -1522,7 +1522,7 @@ minio:
   imagePullSecrets: []
 
   ## Number of Minio replicas
-  replicaCount: 1
+  replicaCount: 2
 
   ## Service Account configuration
   serviceAccount:
@@ -1582,7 +1582,7 @@ minio:
   ## TODO: remove autoscaling for minio
   autoscaling:
     enabled: true
-    minReplicas: 1
+    minReplicas: 2
     maxReplicas: 100
     targetCPUUtilizationPercentage: 80
     # targetMemoryUtilizationPercentage: 80
