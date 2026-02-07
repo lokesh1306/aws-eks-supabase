@@ -878,7 +878,7 @@ storage:
             operator: In
             values:
             - supabase-storage
-        topologyKey: topology.kubernetes.io/zone
+        topologyKey: kubernetes.io/hostname
 
   service:
     type: ClusterIP
@@ -1012,7 +1012,7 @@ imgproxy:
             operator: In
             values:
             - supabase-imgproxy
-        topologyKey: topology.kubernetes.io/zone
+        topologyKey: kubernetes.io/hostname
 
   service:
     type: ClusterIP
