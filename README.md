@@ -13,10 +13,7 @@ Production ready, self-hosted Supabase deployment on AWS using Kubernetes (EKS),
 - [Autoscaling](#autoscaling)
 - [Security & Scalability Deep Dive](#security--scalability-deep-dive)
 - [Observability](#observability)
-- [Troubleshooting](#troubleshooting)
 - [Tear-down Instructions](#tear-down-instructions)
-- [Challenges & Learnings](#challenges--learnings)
-- [Future Improvements](#future-improvements)
 
 ## Architecture Overview
 
